@@ -194,6 +194,13 @@ static double	     get_mirror_x_position                     (NemoIconContainer 
 								NemoIcon *icon,
 								double x);
 static void         text_ellipsis_limit_changed_container_callback  (gpointer callback_data);
+static void          get_max_icon_dimensions 			    (GList *icon_start,
+								     GList *icon_end,
+								     double *max_icon_width,
+								     double *max_icon_height,
+								     double *max_text_width,
+								     double *max_text_height,
+								     double *max_bounds_height);
 
 static int compare_icons_horizontal (NemoIconContainer *container,
 				     NemoIcon *icon_a,
@@ -1333,8 +1340,9 @@ lay_down_icons_horizontal (NemoIconContainer *container,
 	double max_height_above, max_height_below;
 	double height_above, height_below;
 	double line_width;
-	double grid_width;
 	double max_text_width, max_icon_width;
+	double max_text_height, max_icon_height;
+	double max_bounds_height;
 	int icon_width;
 	int i;
 	GtkAllocation allocation;
@@ -1350,23 +1358,19 @@ lay_down_icons_horizontal (NemoIconContainer *container,
 	
 	/* Lay out icons a line at a time. */
 	canvas_width = CANVAS_WIDTH(container, allocation);
-	max_icon_width = max_text_width = 0.0;
+	get_max_icon_dimensions (icons, NULL,
+				 &max_icon_width, &max_icon_height,
+				 &max_text_width, &max_text_height,
+				 &max_bounds_height);
 
 	if (container->details->label_position == NEMO_ICON_LABEL_POSITION_BESIDE) {
-		/* Would it be worth caching these bounds for the next loop? */
-		for (p = icons; p != NULL; p = p->next) {
-			icon = p->data;
-
-			icon_bounds = nemo_icon_canvas_item_get_icon_rectangle (icon->item);
-			max_icon_width = MAX (max_icon_width, ceil (icon_bounds.x1 - icon_bounds.x0));
-
-			text_bounds = nemo_icon_canvas_item_get_text_rectangle (icon->item, TRUE);
-			max_text_width = MAX (max_text_width, ceil (text_bounds.x1 - text_bounds.x0));
-		}
-
-		grid_width = max_icon_width + max_text_width + ICON_PAD_LEFT + ICON_PAD_RIGHT;
+		icon_width = (int) max_icon_width + max_text_width + ICON_PAD_LEFT + ICON_PAD_RIGHT;
 	} else {
-		grid_width = STANDARD_ICON_GRID_WIDTH;
+		/* Instead of basing the icon size off the grid size which was just a constant,
+		   regardless of zoom level, calculate it based on the maximum icon/text size
+		   with padding */
+
+		icon_width = (int) MAX (max_icon_width, max_text_width) + ICON_PAD_LEFT + ICON_PAD_RIGHT;
 	}
 	
 	line_width = container->details->label_position == NEMO_ICON_LABEL_POSITION_BESIDE ? ICON_PAD_LEFT : 0;
@@ -1386,15 +1390,13 @@ lay_down_icons_horizontal (NemoIconContainer *container,
 
 		icon_bounds = nemo_icon_canvas_item_get_icon_rectangle (icon->item);
 		text_bounds = nemo_icon_canvas_item_get_text_rectangle (icon->item, TRUE);
-
-		icon_width = ceil ((bounds.x1 - bounds.x0)/grid_width) * grid_width;
 		
 		/* Calculate size above/below baseline */
 		height_above = icon_bounds.y1 - bounds.y0;
 		height_below = bounds.y1 - icon_bounds.y1;
 
 		/* If this icon doesn't fit, it's time to lay out the line that's queued up. */
-		if (line_start != p && line_width + icon_width >= canvas_width ) {
+		if (line_start != p && line_width + icon_width > canvas_width ) {
 			if (container->details->label_position == NEMO_ICON_LABEL_POSITION_BESIDE) {
 				y += ICON_PAD_TOP;
 			} else {
