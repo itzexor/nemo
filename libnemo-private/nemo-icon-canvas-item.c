@@ -51,7 +51,7 @@
 #define LABEL_OFFSET 1
 #define LABEL_LINE_SPACING 0
 
-#define MAX_TEXT_WIDTH_STANDARD 135
+#define MAX_TEXT_WIDTH_STANDARD 100
 #define MAX_TEXT_WIDTH_BESIDE 90
 #define MAX_TEXT_WIDTH_BESIDE_TOP_TO_BOTTOM 150
 
@@ -2076,6 +2076,7 @@ nemo_icon_canvas_item_get_max_text_width (NemoIconCanvasItem *item)
 {
 	EelCanvasItem *canvas_item;
 	NemoIconContainer *container;
+	double scaling_factor;
 
 	canvas_item = EEL_CANVAS_ITEM (item);
 	container = NEMO_ICON_CONTAINER (canvas_item->canvas);
@@ -2092,7 +2093,9 @@ nemo_icon_canvas_item_get_max_text_width (NemoIconCanvasItem *item)
 			return MAX_TEXT_WIDTH_BESIDE * canvas_item->canvas->pixels_per_unit;
 		}
 	} else {
-		return MAX_TEXT_WIDTH_STANDARD * canvas_item->canvas->pixels_per_unit;
+		/* Limit scaling factor to 3.0 otherwise the text width is very wide in icon view max zoom */
+		scaling_factor = MIN(canvas_item->canvas->pixels_per_unit, 3.0);
+		return MAX_TEXT_WIDTH_STANDARD * scaling_factor;
 	}
 }
 
