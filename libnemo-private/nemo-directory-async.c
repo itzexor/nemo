@@ -3568,6 +3568,12 @@ is_link_trusted (NemoFile *file,
 		location = nemo_file_get_location (file);
 		res = nemo_is_in_system_dir (location);
 		g_object_unref (location);
+
+		if (!res && nemo_file_is_symbolic_link (file)) {
+			location = g_file_new_for_path (nemo_file_get_symbolic_link_target_path (file));
+			res = nemo_is_in_system_dir (location);
+			g_object_unref (location);
+		}
 	}
 	
 	return res;
